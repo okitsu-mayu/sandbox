@@ -1,0 +1,21 @@
+fileFormatVersion: 2
+guid: a9f60d8af4cac89498403c0a49c73dce
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - panelWalls: {instanceID: 0}
+  - buttonYakan: {instanceID: 0}
+  - imageYakanIcon: {instanceID: 0}
+  - buttonStove: {instanceID: 0}
+  - buttonStove2: {instanceID: 0}
+  - buttonPuipui: {instanceID: 0}
+  - buttonPuipui2: {instanceID: 0}
+  - buttonMessage: {instanceID: 0}
+  - buttonMessageText: {instanceID: 0}
+  - yakanPicture: {instanceID: 0}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

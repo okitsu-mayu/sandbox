@@ -1,0 +1,193 @@
+VERSION 1.0 CLASS
+BEGIN
+  MultiUse = -1  'True
+END
+Attribute VB_Name = "Sheet1"
+Attribute VB_GlobalNameSpace = False
+Attribute VB_Creatable = False
+Attribute VB_PredeclaredId = True
+Attribute VB_Exposed = True
+Sub ProgramMake()
+Dim flg As Boolean
+
+If (MsgBox("OKを押すと、短編集の処理を実施します。" + vbLf + "プログラム全体の紹介文などはA1セルに記載してください。" + vbLf + _
+"キャンセルを押すと、長編用の処理を実施します。", _
+     vbOKCancel) = vbOK) Then
+    Call RRTProgram(2)
+Else
+    Call RRTProgram(1)
+End If
+ProgramEnd:
+
+End Sub
+Function RRTProgram(args As Integer)
+Dim xlAPP As Application 'Excel.Application
+Dim strPathName As String ' 指定フォルダ名
+Dim strFileName As String '検出したファイル名
+Dim SWESC As Boolean 'Escキー判定
+Dim sheetIdx, rowIdx, i, j As Integer ' 諸々添え字
+Dim format As String 'テンプレート
+Dim header, footer As String '短編用
+Dim language As Variant '言語配列
+Dim formatSheet As String 'フォーマットシート名
+
+language = Array("JP", "EN")
+
+strPathName = ""
+
+'作品フォルダを指定 初期位置直したい
+With Application.FileDialog(msoFileDialogFolderPicker)
+.Title = "フォルダの選択"
+    If .Show = True Then
+    strPathName = .SelectedItems(1)
+End If
+End With
+If strPathName = "" Then Exit Function
+Set xlAPP = Application
+    With xlAPP
+        .ScreenUpdating = False '画面描画停止
+        .EnableEvents = False 'イベント動作停止
+        .EnableCancelKey = xlErrorHandler 'Escキーでエラートラップする
+        .Cursor = xlWait 'カーソルをくるくるにする
+    End With
+    On Error GoTo Button1_Click_ESC
+'フォーマット数分繰り返し
+For i = 0 To UBound(language)
+    formatSheet = "format_" & language(i)
+    If args = 2 Then
+        ' 短編の場合は短編用フォーマット読み込み
+        formatSheet = formatSheet & "(短編集)"
+    End If
+    rowIdx = args
+    ' formatシートの内容取り込み
+    Sheets(formatSheet).Select
+    ' formatシートのA列に何もない場合は処理を終了する
+    If Cells(Rows.Count, 1).End(xlUp).Row = 0 Then
+        MsgBox "format " + language(i) + "シートを読み込めません。" + vbLf + "A列に入力してください。"
+        GoTo Button1_Click_EXIT
+    End If
+    '最終行までformatの内容を読み込む
+    format = ActiveSheet.Cells(1, 1).Value
+    Dim formMax As Integer
+    formMax = ActiveSheet.Cells(Rows.Count, 1).End(xlUp).Row
+    For j = 2 To formMax
+        format = format + vbLf + ActiveSheet.Cells(j, 1).Value
+    Next j
+    ' 指定フォルダ内のExcelワークブックのファイル名を参照する(1件目)
+    strFileName = Dir(strPathName & "\*.xls", vbNormal)
+    If strFileName = "" Then
+        MsgBox "このフォルダにはExcelワークブックは存在しません。"
+        Exit Function
+    End If
+    
+    
+    ' 指定フォルダの全Excelワークブックについて繰り返す
+    Do While strFileName <> ""
+        ' Escキー打鍵判定
+        DoEvents
+        If SWESC = True Then
+            ' 中断するのかをメッセージで確認
+            If MsgBox("中断キーが押されました。ここで終了しますか?", _
+             vbInformation + vbYesNo) = vbYes Then
+                GoTo Button1_Click_EXIT
+            Else
+                SWESC = False
+            End If
+        End If
+    ThisWorkbook.Activate
+    ' 検索した1ファイル単位の処理
+    Dim wk() As String
+    wk = OneWorkbookProc(xlAPP, strPathName, strFileName, format)
+    For sheetIdx = args To UBound(wk) ' 短編集の場合、1シート目は対象外とする（全体紹介シートのため）
+        ActiveWorkbook.Sheets("結果_" & language(i)).Cells(rowIdx, 1).Value = wk(sheetIdx, 0) ' 本文
+        ActiveWorkbook.Sheets("結果_" & language(i)).Cells(rowIdx, 2).Value = wk(sheetIdx, 1) ' 日本語タイトル
+        ActiveWorkbook.Sheets("結果_" & language(i)).Cells(rowIdx, 3).Value = wk(sheetIdx, 2) ' 英語タイトル
+        rowIdx = rowIdx + 1
+    Next sheetIdx
+    '次のファイル名を参照
+    strFileName = Dir
+Loop
+Next i
+
+GoTo Button1_Click_EXIT
+' Escキー脱出用行ラベル
+Button1_Click_ESC:
+If Err.Number = 18 Then
+' EscキーでのエラーRaise
+    SWESC = True
+    Resume
+ElseIf Err.Number = 1004 Then
+'隠しシートなどの実行時エラーは無視
+    Resume Next
+Else
+'その他のエラーはメッセージ表示後終了
+    MsgBox Err.Description
+End If
+' 処理終了
+Button1_Click_EXIT:
+    With xlAPP
+    .StatusBar = False
+    .EnableEvents = True
+    .EnableCancelKey = xlInterrupt
+    .Cursor = xlDefault
+    .ScreenUpdating = True
+    End With
+Set xlAPP = Nothing
+
+End Function
+'*********************************************************************************
+'*1つのワークブックの処理
+'********************************************************************************
+Private Function OneWorkbookProc(xlAPP As Application, _
+            strPathName As String, strFileName As String, format As String) As String()
+Dim text As String
+Dim i, j As Integer
+Dim seqRow As Integer
+Dim jpTitle As Integer
+Dim enTitle As Integer
+' 定数指定 そのうちクラス化したい
+'seqNoの行数を指定 更新SQLを作るためにやってる　まだ未実装
+seqRow = 32
+' 日本語タイトル行指定
+jpTitle = 1
+' 英語タイトル行指定
+enTitle = 2
+
+Dim objWBK As Workbook 'ワークブック Object
+'ワークブックを開く
+Set objWBK = Workbooks.Open(Filename:=strPathName & "\" & strFileName, _
+                            UpdateLinks:=False, _
+                            ReadOnly:=True)
+'lll 1作品単位の処理 lll
+Dim wk() As String
+ReDim wk(objWBK.Sheets.Count, 2)
+'シート毎に処理を実施　本来は短編集のみに必要だが、念のため長編もこのループにいれとく
+For i = 1 To objWBK.Sheets.Count
+    objWBK.Sheets(objWBK.Sheets(i).Name).Select
+    text = format
+    Dim formatRow As Integer
+    formatRow = ActiveSheet.Cells(Rows.Count, 1).End(xlUp).Row
+    'フォーマットの各A列(項目名)個所をB列(値)に置換する
+    For j = 1 To formatRow
+        text = Replace(text, "$" & ActiveSheet.Cells(j, 1).Value, ActiveSheet.Cells(j, 2).Value)
+    Next j
+    wk(i, 0) = text ' 本文テキスト
+    wk(i, 1) = ActiveSheet.Cells(jpTitle, 2).Value ' 日本語タイトル
+    wk(i, 2) = ActiveSheet.Cells(enTitle, 2).Value ' 英語タイトル
+    ' wk(i, 3) = ActiveSheet.Cells(seqRow, 2).Value ' 今んとこ使ってない
+Next i
+OneWorkbookProc = wk
+objWBK.Close SaveChanges:=False
+Set objWBK = Nothing
+End Function
+
+
+
+
+
+
+
+
+
+
+
