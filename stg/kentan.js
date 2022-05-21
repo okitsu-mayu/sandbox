@@ -66,17 +66,12 @@ class Enemy {
 		
 			
 		switch(this.kind) {
-			// case 0: context.fillStyle = "rgb(0, 255, 255)"; break; // 水色
-			// case 1: context.fillStyle = "rgb(0, 255, 0)"; break; // 緑色
-			// case 2: context.fillStyle = "rgb(255, 255, 0)"; break; // 黄色
-			// case 3: context.fillStyle = "rgb(255, 255, 255)"; break; // 黄色
 			 case 0: img01.src = "komiya.png"; break;
 			 case 1: img01.src = "kohei.png"; break;
 			 case 2: img01.src = "mami.png"; break;
 			 case 3: img01.src = "mayu.png"; break;
 		}
 		context.drawImage(img01, this.x - this.width / 2, this.y - this.height / 2,this.width, this.height);
-		// context.fillRect(this.x - this.width / 2, this.y - this.height / 2, this.width, this.height);
 
 		//	敵の弾を描画
 		for(var i = 0;i < this.BULLET_NUM;i++) {
@@ -197,8 +192,6 @@ class Player {
 			var img01 = new Image();
 			img01.src = "takeshi.png";
 			context.drawImage(img01, this.x - this.width / 2, this.y - this.height / 2,this.width, this.height);
-			// context.fillStyle = "rgb(255, 0, 0)";
-			// context.fillRect(this.x - this.width / 2, this.y - this.height / 2, this.width, this.height);
 		}
 	
 			//	発射された弾を更新・描画
